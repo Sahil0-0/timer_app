@@ -40,3 +40,31 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# iOS widget source files
+!/ios
+!/ios/timerapp.xcodeproj
+!/ios/timerapp.xcodeproj/project.pbxproj
+!/ios/timerapp
+!/ios/timerapp/timerapp.entitlements
+!/ios/timerapp/TimerWidgetModule.swift
+!/ios/timerapp/TimerWidgetModuleBridge.m
+!/ios/ChronosWidget
+!/ios/ChronosWidget/**
+# re-ignore everything else in ios that we don't need
+/ios/.gitignore
+/ios/.xcode.env
+/ios/Podfile
+/ios/Podfile.lock
+/ios/Podfile.properties.json
+/ios/setup_widget.rb
+/ios/timerapp.xcodeproj/xcshareddata
+/ios/timerapp.xcworkspace
+/ios/timerapp/AppDelegate.swift
+/ios/timerapp/Images.xcassets
+/ios/timerapp/Info.plist
+/ios/timerapp/PrivacyInfo.xcprivacy
+/ios/timerapp/SplashScreen.storyboard
+/ios/timerapp/Supporting
+/ios/timerapp/timerapp-Bridging-Header.h
+
