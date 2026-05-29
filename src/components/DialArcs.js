@@ -1,25 +1,17 @@
-import { useRef, useState } from "react";
-import { StyleSheet, Dimensions, PanResponder, Animated } from "react-native";
-import Svg, {
-  Circle,
-  Line,
-  Text as SvgText,
-  G,
-  Defs,
-  LinearGradient,
-  Stop,
-} from "react-native-svg";
+import { useRef, useState, useEffect } from "react";
+import { StyleSheet, View, Dimensions, PanResponder, Animated } from "react-native";
+import Svg, { Line, Text as SvgText, G } from "react-native-svg";
+import DialSvg from "../../assets/images/dial.svg";
 import { fontFamily } from "../theme/typography";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const DIAL_SIZE = SCREEN_WIDTH * 1.5;
 const DEG_PER_PX = 0.4;
 
-const HOURS_STEP_DEG = 30; // 360° / 12
-const MINS_STEP_DEG = 6; // 360° / 60
-
+const HOURS_STEP_DEG = 30;
+const MINS_STEP_DEG = 6; 
 const HOUR_VALUES = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
-const MIN_VALUES = Array.from({ length: 60 }, (_, i) => i); // 0–59
+const MIN_VALUES = Array.from({ length: 60 }, (_, i) => i); 
 
 const computeSelectedMinute = (angle) =>
   ((Math.round(-angle / MINS_STEP_DEG) % 60) + 60) % 60;
@@ -27,7 +19,6 @@ const computeSelectedMinute = (angle) =>
 function DialFace({
   size,
   values,
-  gradId,
   stepDeg,
   majorEvery = 1,
   selectedIndex = null,
@@ -38,8 +29,6 @@ function DialFace({
   const cx = size / 2;
   const cy = size / 2;
   const labelR = size * labelRadiusFactor;
-  const circleR = size * 0.499;
-
   const tickOuter = size * 0.485;
   const tickInner = size * 0.46;
 
@@ -86,48 +75,59 @@ function DialFace({
   };
 
   return (
-    <Svg
-      width={size}
-      height={size}
-      viewBox={`0 0 ${size} ${size}`}
-      pointerEvents="none"
-    >
-      <Defs>
-        <LinearGradient id={gradId} x1="1" y1="0.5" x2="0" y2="0.5">
-          <Stop offset="0" stopColor="#222222" />
-          <Stop offset="1" stopColor="#000000" />
-        </LinearGradient>
-      </Defs>
+    <View style={{ width: size, height: size }}>
+      <DialSvg width={size} height={size} style={StyleSheet.absoluteFill} />
+      <Svg
+        width={size}
+        height={size}
+        viewBox={`0 0 ${size} ${size}`}
+        pointerEvents="none"
+        style={StyleSheet.absoluteFill}
+      >
+        {values.map((val, i) => {
+          const isSelected = selectedIndex !== null && i === selectedIndex;
+          const isMajor = i % majorEvery === 0;
 
-      <Circle
-        cx={cx}
-        cy={cy}
-        r={circleR}
-        fill={`url(#${gradId})`}
-        stroke="#363636"
-        strokeWidth="1"
-      />
+          if (!isMajor) return renderTick(i, i * stepDeg, isSelected);
 
-      {values.map((val, i) => {
-        const isSelected = selectedIndex !== null && i === selectedIndex;
-        const isMajor = i % majorEvery === 0;
-
-        if (!isMajor) return renderTick(i, i * stepDeg, isSelected);
-
-        return renderLabel(i, i * stepDeg, String(val).padStart(2, "0"), isSelected);
-      })}
-    </Svg>
+          return renderLabel(i, i * stepDeg, String(val).padStart(2, "0"), isSelected);
+        })}
+      </Svg>
+    </View>
   );
 }
 
 const computeSelectedHour = (angle) =>
   ((-Math.round(angle / HOURS_STEP_DEG) % 12) + 12) % 12;
 
-export default function DialArcs({ onTimeChange }) {
+export default function DialArcs({ onTimeChange, value, disabled }) {
   const [selectedMinute, setSelectedMinute] = useState(0);
   const [selectedHour, setSelectedHour] = useState(0);
   const lastMinuteRef = useRef(0);
   const lastHourRef = useRef(0);
+  const disabledRef = useRef(false);
+
+  useEffect(() => {
+    disabledRef.current = !!disabled;
+  }, [disabled]);
+
+  useEffect(() => {
+    if (value == null) return;
+    const targetHourAngle = -value.hours * HOURS_STEP_DEG;
+    const targetMinAngle = -value.minutes * MINS_STEP_DEG;
+    hoursAngle.current = targetHourAngle;
+    minsAngle.current = targetMinAngle;
+    setSelectedHour(value.hours);
+    setSelectedMinute(value.minutes);
+    Animated.parallel([
+      Animated.timing(hoursRot, { toValue: targetHourAngle, duration: 600, useNativeDriver: true }),
+      Animated.timing(minsRot, { toValue: targetMinAngle, duration: 600, useNativeDriver: true }),
+    ]).start();
+  }, [value]);
+
+  useEffect(() => {
+    onTimeChange?.({ hours: selectedHour, minutes: selectedMinute });
+  }, [selectedHour, selectedMinute]);
 
   const hoursRot = useRef(new Animated.Value(0)).current;
   const minsRot = useRef(new Animated.Value(0)).current;
@@ -140,8 +140,8 @@ export default function DialArcs({ onTimeChange }) {
 
   const hoursPR = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => true,
+      onStartShouldSetPanResponder: () => !disabledRef.current,
+      onMoveShouldSetPanResponder: () => !disabledRef.current,
       onPanResponderGrant: (evt) => {
         hoursStartX.current = evt.nativeEvent.pageX;
         hoursStartAngle.current = hoursAngle.current;
@@ -177,8 +177,8 @@ export default function DialArcs({ onTimeChange }) {
 
   const minsPR = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => true,
+      onStartShouldSetPanResponder: () => !disabledRef.current,
+      onMoveShouldSetPanResponder: () => !disabledRef.current,
       onPanResponderGrant: (evt) => {
         minsStartX.current = evt.nativeEvent.pageX;
         minsStartAngle.current = minsAngle.current;
@@ -234,7 +234,6 @@ export default function DialArcs({ onTimeChange }) {
         <DialFace
           size={DIAL_SIZE}
           values={HOUR_VALUES}
-          gradId="gradHours"
           stepDeg={HOURS_STEP_DEG}
           selectedIndex={selectedHour}
           flipLabels
@@ -252,7 +251,6 @@ export default function DialArcs({ onTimeChange }) {
         <DialFace
           size={DIAL_SIZE}
           values={MIN_VALUES}
-          gradId="gradMins"
           stepDeg={MINS_STEP_DEG}
           majorEvery={5}
           selectedIndex={selectedMinute}

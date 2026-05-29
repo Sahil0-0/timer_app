@@ -4,7 +4,7 @@ import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { colors } from './src/theme/colors';
-import ChronosSplashScreen from './src/screens/SplashScreen';
+import HomeScreen from './src/screens/HomeScreen';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -31,7 +31,7 @@ export default function App() {
       onLayout={onLayoutRootView}
     >
       <StatusBar style="light" />
-      <ChronosSplashScreen />
+      <HomeScreen />
     </View>
   );
 }

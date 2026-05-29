@@ -11,5 +11,6 @@ export const colors = {
     muted: "#454545",
   },
 
-  border: "#454545",
+  charcoal: ["#1E2023", "#47484C"],
+  mirror: ["#454545", "#FFFFFF"],
 };
