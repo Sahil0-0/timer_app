@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "timer_app",
-    "slug": "timer_app",
+    "name": "Chronos",
+    "slug": "chronos",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -14,7 +14,7 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.chronos_app"
+      "bundleIdentifier": "com.chronos.app"
     },
     "android": {
       "adaptiveIcon": {
@@ -22,7 +22,7 @@
         "backgroundColor": "#0d0d0d"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.chronos_app"
+      "package": "com.chronos.app"
     },
     "web": {
       "favicon": "./assets/favicon.png"

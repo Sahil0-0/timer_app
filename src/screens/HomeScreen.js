@@ -1,10 +1,21 @@
 import { useEffect, useRef, useState } from 'react';
-import { StyleSheet, View, Text, Animated, TouchableOpacity } from 'react-native';
+import { AppState, StyleSheet, View, Text, Animated, TouchableOpacity } from 'react-native';
+import * as Notifications from 'expo-notifications';
 import ChronosBg from '../../assets/images/chronos_bg.svg';
 import DialArcs from '../components/DialArcs';
 import HourglassOverlay from '../components/HourglassOverlay';
 import { colors } from '../theme/colors';
 import { fontFamily } from '../theme/typography';
+import { updateWidget } from '../native/TimerWidget';
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowBanner: true,
+    shouldShowList: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
 
 export default function HomeScreen() {
   const textOpacity = useRef(new Animated.Value(1)).current;
@@ -13,26 +24,66 @@ export default function HomeScreen() {
   const [isRunning, setIsRunning] = useState(false);
   const [remaining, setRemaining] = useState(0);
   const intervalRef = useRef(null);
+  const endTimeRef = useRef(null);
+  const isRunningRef = useRef(false);
+
+  useEffect(() => {
+    Notifications.requestPermissionsAsync();
+  }, []);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', nextState => {
+      if (nextState === 'active' && isRunningRef.current && endTimeRef.current) {
+        const newRemaining = Math.max(0, Math.round((endTimeRef.current - Date.now()) / 1000));
+        if (newRemaining <= 0) {
+          clearInterval(intervalRef.current);
+          isRunningRef.current = false;
+          setIsRunning(false);
+          setRemaining(0);
+          updateWidget(0, false);
+        } else {
+          setRemaining(newRemaining);
+          updateWidget(endTimeRef.current, true);
+        }
+      }
+    });
+    return () => subscription.remove();
+  }, []);
 
   const handleStartStop = () => {
     if (isRunning) {
       clearInterval(intervalRef.current);
+      isRunningRef.current = false;
+      endTimeRef.current = null;
       setIsRunning(false);
+      Notifications.cancelAllScheduledNotificationsAsync();
+      updateWidget(0, false);
       return;
     }
     const totalSeconds = time.hours * 3600 + time.minutes * 60;
     if (totalSeconds === 0) return;
+    const end = Date.now() + totalSeconds * 1000;
+    endTimeRef.current = end;
+    isRunningRef.current = true;
     setRemaining(totalSeconds);
     setIsRunning(true);
+    updateWidget(end, true);
+    Notifications.scheduleNotificationAsync({
+      content: { title: 'Chronos', body: 'Your focus session is complete.' },
+      trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: new Date(end) },
+    });
     intervalRef.current = setInterval(() => {
-      setRemaining(prev => {
-        if (prev <= 1) {
-          clearInterval(intervalRef.current);
-          setIsRunning(false);
-          return 0;
-        }
-        return prev - 1;
-      });
+      const newRemaining = Math.max(0, Math.round((endTimeRef.current - Date.now()) / 1000));
+      if (newRemaining <= 0) {
+        clearInterval(intervalRef.current);
+        isRunningRef.current = false;
+        endTimeRef.current = null;
+        setIsRunning(false);
+        setRemaining(0);
+        updateWidget(0, false);
+        return;
+      }
+      setRemaining(newRemaining);
     }, 1000);
   };
 
@@ -55,7 +106,10 @@ export default function HomeScreen() {
     return () => clearTimeout(timer);
   }, []);
 
-  useEffect(() => () => clearInterval(intervalRef.current), []);
+  useEffect(() => () => {
+    clearInterval(intervalRef.current);
+    Notifications.cancelAllScheduledNotificationsAsync();
+  }, []);
 
   return (
     <View style={styles.container}>
